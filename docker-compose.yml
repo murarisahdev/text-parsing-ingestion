@@ -1,0 +1,33 @@
+version: '3.9'
+
+services:
+  parsing_text_api:
+    build: ./services/parsing_text_api
+    ports:
+      - "8000:8000"
+    environment:
+      GCP_PROJECT: "parsing-text"
+      GCS_BUCKET: "parsing-text-bucket"
+      PUBSUB_TOPIC: text-parsing-ingestion-request
+      GOOGLE_APPLICATION_CREDENTIALS: /app/credentials.json
+      PYTHONPATH: /app
+    volumes:
+      - .:/app
+      - ./parsing-text-563777956a4b.json:/app/credentials.json
+    working_dir: /app/services/parsing_text_api
+
+  extractor:
+    build:
+      context: .
+      dockerfile: services/extractor/Dockerfile
+    environment:
+      GCP_PROJECT: parsing-text
+      GCS_BUCKET: test-ingestion-request-bucket
+      GOOGLE_APPLICATION_CREDENTIALS: /app/credentials.json
+      PYTHONPATH: /app
+    volumes:
+      - .:/app
+      - ./parsing-text-563777956a4b.json:/app/credentials.json
+    working_dir: /app/services/extractor
+    depends_on:
+      - parsing_text_api

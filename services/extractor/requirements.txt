@@ -1,0 +1,13 @@
+textract
+beautifulsoup4
+requests
+google-cloud-pubsub
+google-cloud-storage
+PyMuPDF
+python-dotenv
+pytesseract
+pdf2image
+pdfplumber
+pillow
+trafilatura
+pdf2image
