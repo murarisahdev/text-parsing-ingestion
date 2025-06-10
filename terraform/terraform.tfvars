@@ -1,0 +1,5 @@
+credentials_file = "../parsing-text-563777956a4b.json"
+project_id       = "parsing-text"
+bucket_name      = "parsing-text-bucket"
+topic_name       = "text-parsing-ingestion-request"
+subscription_name = "extractor-sub"
