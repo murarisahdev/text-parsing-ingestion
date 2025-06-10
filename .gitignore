@@ -1,0 +1,51 @@
+# Terraform state and variables
+*.tfstate
+*.tfstate.*
+.terraform/
+crash.log
+override.tf
+override.tf.json
+terraform.tfvars.json
+.terraform.lock.hcl
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.env
+*.egg-info/
+dist/
+build/
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# VS Code / IDEs
+.vscode/
+.idea/
+*.swp
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Git
+*.orig
+
+# Ignore test coverage / reports
+htmlcov/
+coverage.*
+.cache
+pytest_cache/
+
+# Ignore credentials
+*.json
+
+# Ignore large provider binaries (avoid Terraform plugins being committed)
+terraform/.terraform/
+.venv
