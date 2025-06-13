@@ -1,132 +1,204 @@
 # Text Parsing Ingestion Pipeline
 
-A scalable, event-driven document ingestion pipeline for Google Cloud.  
-**Features:** Multi-tenant, microservices, chunking, embedding, OCR, and vector storage.
+A **modular**, **scalable**, and **event-driven** document ingestion pipeline built with **FastAPI**, **Python**, **Docker**, and **Google Cloud Pub/Sub**. Designed for use cases like **RAG**, **semantic search**, and **LLM preprocessing**.
 
 ---
 
-## Architecture
+## Architecture Overview
 
-**Microservices:**
-- **ingestion_api:** HTTP API for file/URL ingestion, authentication, and event publishing (Pub/Sub).
-- **extractor:** Consumes events, extracts text (with OCR), chunks, and sends to embedding/vector DB.
-- **shared:** Common utilities and code.
-- **terraform:** (Optional) Infrastructure as Code for GCP resources.
-
-**Flow:**
-1. Client uploads file or URL to `ingestion_api`.
-2. API authenticates, publishes event to Pub/Sub.
-3. `extractor` service processes event: downloads, extracts, chunks, embeds, and stores results.
-4. Extracted files go to GCS; vectors to vector DB; metadata tracked.
+```text
+[ Ingestion API ] ──> [ Pub/Sub Topic ] ──> [ Extractor Service ]
+        │                        │                      │
+        ▼                        ▼                      ▼
+  File / URL Input        Smart Parsing        GCS Upload + Pub/Sub
+```
 
 ---
 
 ## Project Structure
 
-```
-.
-├── docs/                  # Documentation
-├── services/
-│   ├── extractor/         # Extraction & chunking service
-│   │   ├── extractor.py
-│   │   ├── main.py
+```text
+text-parsing-ingestion-pipeline/
+│
+├── docs/                         # Project documentation
+│   └── README.md
+│
+├── services/                     # Microservices
+│   ├── extractor/                # Extracts & parses document/URL text
+│   │   ├── keys/
 │   │   ├── utils/
-│   │   └── ...
-│   └── ingestion_api/     # HTTP API & Pub/Sub parsing_text_api
-│       ├── api.py
-│       ├── main.py
-│       ├── pubsub_client.py
-│       ├── utils.py
-│       └── ...
-├── shared/                # Shared code
-├── terraform/             # (Optional) IaC scripts
-├── docker-compose.yml     # Local orchestration
-├── .env                   # Environment variables
-├── config.py              # Project config
-├── requirements.txt       # Root dependencies
-└── README.md
+│   │   ├── __init__.py
+│   │   ├── Dockerfile
+│   │   ├── main.py
+│   │   └── requirements.txt
+│   │
+│   ├── parsing_text_api/        # FastAPI-based ingestion endpoint
+│   │   ├── keys/
+│   │   ├── utils/
+│   │   ├── api.py
+│   │   ├── credentials.json
+│   │   ├── Dockerfile
+│   │   ├── main.py
+│   │   ├── pubsub_client.py
+│   │   └── requirements.txt
+│
+├── shared/                      # Shared code across services
+│   ├── handlers/
+│   ├── pubsub/
+│   │   ├── publisher.py
+│   │   └── subscriber.py
+│   │
+│   └── storage/
+│       ├── file_utils.py
+│       └── gcs_client.py
+│
+├── terraform/                   # (Optional) IaC using Terraform
+│
+├── .env                         # Environment variables
+├── .flake8                      # Linter config
+├── .gitignore
+├── docker-compose.yml           # Local orchestration
+├── pyproject.toml               # Formatter & tool config
+├── config.py                    # Centralized config
+├── credentials.json             # GCP credentials (local only)
+├── .pre-commit-config.yaml      # Pre-commit hooks
+└── parsing-text-*.json          # Temporary or output metadata
 ```
 
 ---
 
-## Setup & Deployment
+## Features
 
-### Prerequisites
-
-- Python 3.11+
-- Docker & Docker Compose
-- GCP account (Pub/Sub, GCS, Vision API, etc.)
-- (Optional) Terraform
-
-### Local Development
-
-1. **Clone the repo:**
-    ```sh
-    git clone https://github.com/murarisahdev/text-parsing-ingestion.git
-    cd text-parsing-ingestion-pipeline
-    ```
-
-2. **Configure environment:**
-    - Copy `.env.example` to `.env` and fill in values.
-    - Place GCP credentials in `credentials.json`.
-
-3. **Build & run services:**
-    ```sh
-    docker-compose up --build
-    ```
-
-## Example Usage
-
-### Ingest a File
-
-```sh
-curl -X 'POST' \
-  'http://0.0.0.0:8000/api/upload' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: multipart/form-data' \
-  -F 'tenant_id=test1' \
-  -F 'file=path/to/document.pdf;type=application/pdf'
-```
-
-### Ingest a Web Page
-
-```sh
-curl -X 'POST' \
-  'http://0.0.0.0:8000/api/url' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/x-www-form-urlencoded' \
-  -d 'tenant_id=test1&url=example.com/page'
+- Ingest **PDF**, **HTML**, **scanned images**, and **URLs**
+- Built with **FastAPI**, **Pub/Sub**, **Docker**, **GCS**
+- Multi-tenant support and bucket isolation
+- Smart chunking for LLM preprocessing
+- Modular design with clean microservices
+- Designed for **RAG pipelines**, **embedding**, and **indexing**
 
 ---
 
 ## Configuration
 
-- All config via `.env` or environment variables.
-- No hard-coded credentials.
-- Chunking, embedding, and storage are configurable.
+- All configs are handled via `.env` and `config.py`
+- GCP credentials are securely loaded from a service account file
+- You can configure:
+  - Chunk size and overlap
+  - Retry mechanisms
+  - Pub/Sub topics and subscriptions
+  - Bucket names per tenant
 
 ---
 
+## Parsing Strategy
+
+Text extraction is done with a hybrid parsing approach:
+
+| Source Type | Library/Tool Used         | Notes |
+|-------------|----------------------------|-------|
+| PDFs        | `PyMuPDF`, `pdfplumber`    | Fallback to OCR for scanned |
+| Images      | `Tesseract OCR`            | Uses Google Vision API optionally |
+| HTML/URLs   | `BeautifulSoup`, `Playwright` | Smart HTML cleanup |
+| Any file    | `unstructured` (optional)  | Layout-aware parsing |
+
+Parsed text is saved as `.json` in **GCS**, then forwarded for chunking or embedding.
+
 ---
 
-## Cost Estimate (per 1,000 docs)
+## API Usage
 
-| Component         | Est. Cost (USD) | Notes                                      |
-|-------------------|-----------------|---------------------------------------------|
-| Cloud Storage     | $0.02           | 1GB storage, 1,000 PUT ops                  |
-| Pub/Sub           | $0.10           | 1,000,000 messages (free tier covers most)  |
-| Cloud Run         | $1.00           | 1,000 doc processing (light CPU/mem)        |
-| Vision API (OCR)  | $1.50           | 1,000 pages (if OCR used)                   |         |
-| **Total**         | **~$2.62**      | Excluding free tier, depends on usage       |
+### Upload File
+
+```bash
+curl -X POST http://13.201.224.92:8000/api/upload   -F "tenant_id=tenant1"   -F "file=@/path/to/document.pdf"
+```
+
+### Submit URL
+
+```bash
+curl -X POST http://13.201.224.92:8000/api/url   -H "Content-Type: application/x-www-form-urlencoded"   -d "tenant_id=tenant1&url=https://example.com"
+```
+
+### Swagger Docs
+
+Visit: `http://13.201.224.92:8000/docs`
 
 ---
 
-## Design Choices
+## Local Development
 
-- **Microservices:** Scalability, modularity, and clear separation of concerns.
-- **Event-driven:** Pub/Sub for decoupling and reliability.
-- **Multi-tenancy:** Per-tenant buckets/namespaces.
-- **Observability:** Structured logs, metrics, error handling.
-- **Security:** API key/OAuth, tenant isolation.
-- **Extensible:** Easy to add new file types, embedding models, or storage backends.
+### 1. Clone the repo
 
+```bash
+git clone https://github.com/murarisahdev/text-parsing-ingestion.git
+cd text-parsing-ingestion
+```
+
+### 2. Configure environment
+
+- Copy `.example-env` to `.env` and fill in values.
+- Add your GCP credentials as `credentials.json`.
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="./credentials.json"
+```
+
+### 3. Start services
+
+```bash
+docker-compose up --build
+```
+
+---
+
+##  GCP Deployment
+
+1. Create Pub/Sub topics and subscriptions
+2. Set up Cloud Storage bucket(s)
+3. Deploy services to Cloud Run or GKE
+4. Make bucket objects publicly viewable if testing external access:
+
+```python
+from google.cloud import storage
+def make_blob_public(bucket_name, blob_name):
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    blob.make_public()
+    return blob.public_url
+```
+
+---
+
+## Estimated Cost (1,000 docs)
+
+| Component         | Cost (USD) | Notes |
+|------------------|------------|-------|
+| GCS              | ~$0.02     | 1GB storage & PUT |
+| Pub/Sub          | ~$0.10     | Mostly within free tier |
+| Cloud Run        | ~$1.00     | Depends on CPU/memory |
+| Vision OCR       | ~$1.50     | Only if used |
+| **Total**        | **~$2.62** | May be zero on free tier |
+
+---
+
+## Development Tips
+
+```bash
+# Clean & rebuild services
+docker-compose down
+docker-compose up --build
+
+# Format/lint
+ruff check .
+```
+
+---
+
+##  Related
+
+- [Google Cloud Pub/Sub](https://cloud.google.com/pubsub)
+- [FastAPI Docs](https://fastapi.tiangolo.com/)
+- [PyMuPDF](https://pymupdf.readthedocs.io/)
+- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract)
+- [unstructured.io](https://github.com/Unstructured-IO/unstructured)

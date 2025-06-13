@@ -1,0 +1,9 @@
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 100
+MAX_RETRIES = 3
+GOOGLE_APPLICATION_CREDENTIALS=parsing-text-563777956a4b.json
+GCP_PROJECT=parsing-text
+GCS_BUCKET=parsing-text-bucket
+OUTPUT_BUCKET = extracted-output
+PUBSUB_TOPIC=text-parsing-ingestion-request
+SUBSCRIPTION_NAME=extractor-sub
