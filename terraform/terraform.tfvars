@@ -1,4 +1,4 @@
-credentials_file = "../parsing-text-563777956a4b.json"
+credentials_file = "../parsing-text-6492ee9e2cf6.json"
 project_id       = "parsing-text"
 bucket_name      = "parsing-text-bucket"
 topic_name       = "text-parsing-ingestion-request"

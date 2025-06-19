@@ -1,8 +1,7 @@
+import os
 import json
 import logging
-
 from google.cloud import storage
-
 from config import OUTPUT_BUCKET, GCS_BUCKET
 
 logger = logging.getLogger(__name__)
@@ -16,13 +15,18 @@ def download_file_from_gcs(gcs_path: str, local_path: str):
 
         blob = bucket.blob(gcs_path)
         if not blob.exists():
-            logger.error(f" Blob not found in bucket '{GCS_BUCKET}': {gcs_path}")
-            return
+            raise FileNotFoundError(f"Blob not found in bucket '{GCS_BUCKET}': {gcs_path}")
 
         blob.download_to_filename(local_path)
-        logger.info(f" Successfully downloaded {gcs_path} to {local_path}")
+
+        size = os.path.getsize(local_path)
+        if size == 0:
+            raise ValueError(f"Downloaded file is empty: {local_path}")
+
+        logger.info(f"Successfully downloaded {gcs_path} ({size} bytes) to {local_path}")
     except Exception as e:
         logger.error(f"Error downloading file from GCS: {e}", exc_info=True)
+        raise
 
 
 def upload_extrected_text_output_bucket(blob_name: str, content: dict) -> str:

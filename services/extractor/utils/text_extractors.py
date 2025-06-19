@@ -10,27 +10,45 @@ from trafilatura import extract as trafilatura_extract
 
 def smart_pdf_parser(file_path: str) -> str:
     try:
-        # Try extracting with PyMuPDF first
         text = ""
-        with fitz.open(file_path) as doc:
-            for page in doc:
-                text += page.get_text()
 
-        # Fallback: If text is too small, try table or OCR-based
-        if len(text.strip()) < 100:
-            with pdfplumber.open(file_path) as pdf:
-                for page in pdf.pages:
-                    text += page.extract_text() or ""
+        # 1. PyMuPDF
+        try:
+            with fitz.open(file_path) as doc:
+                for page in doc:
+                    text += page.get_text()
+            print(f"[fitz] Extracted {len(text)} characters")
+        except Exception as e:
+            print(f"[fitz] failed: {e}")
 
-        # Fallback again if still insufficient: Use OCR
+        # 2. pdfplumber
         if len(text.strip()) < 100:
-            images = convert_from_path(file_path)
-            for img in images:
-                text += pytesseract.image_to_string(img)
+            try:
+                with pdfplumber.open(file_path) as pdf:
+                    for page in pdf.pages:
+                        text += page.extract_text() or ""
+                print(f"[pdfplumber] Extracted {len(text)} characters")
+            except Exception as e:
+                print(f"[pdfplumber] failed: {e}")
+
+        # 3. OCR
+        if len(text.strip()) < 100:
+            print("[OCR] Trying fallback")
+            try:
+                images = convert_from_path(file_path)
+                print(f"[OCR] {len(images)} pages converted from PDF")
+                for img in images:
+                    result = pytesseract.image_to_string(img)
+                    print(f"[OCR] Extracted {len(result.strip())} characters from one page")
+                    text += result
+                print(f"[OCR] Total extracted: {len(text)} characters")
+            except Exception as e:
+                print(f"[OCR] failed: {e}")
 
         return text.strip()
     except Exception as e:
-        return f"PDF extraction failed: {str(e)}"
+        print(f"[Parser Error] PDF extraction failed: {e}")
+        return ""
 
 
 def smart_url_parser(url: str) -> str:

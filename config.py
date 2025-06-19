@@ -7,7 +7,7 @@ load_dotenv()
 
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv(
-    "GOOGLE_APPLICATION_CREDENTIALS", "parsing-text-563777956a4b.json"
+    "GOOGLE_APPLICATION_CREDENTIALS", "parsing-text-6492ee9e2cf6.json"
 )
 GCP_PROJECT = os.getenv("GCP_PROJECT", "parsing-text")
 GCS_BUCKET = os.getenv("GCS_BUCKET", "parsing-text-bucket")
